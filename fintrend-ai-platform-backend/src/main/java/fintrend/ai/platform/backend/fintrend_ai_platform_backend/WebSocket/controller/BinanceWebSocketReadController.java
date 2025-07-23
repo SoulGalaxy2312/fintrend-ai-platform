@@ -29,4 +29,9 @@ public class BinanceWebSocketReadController {
         return ResponseEntity.ok(data);
     }
 
+    @GetMapping("/model-evaluation")
+    public String getModelEvaluation() {
+        return "MAPE: " + String.valueOf(bianceWebSocketReadService.getModelEvaluation());
+    }
+
 }

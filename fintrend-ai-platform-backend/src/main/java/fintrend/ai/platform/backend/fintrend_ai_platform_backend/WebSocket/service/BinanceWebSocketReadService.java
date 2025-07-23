@@ -1,7 +1,11 @@
 package fintrend.ai.platform.backend.fintrend_ai_platform_backend.WebSocket.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -10,10 +14,19 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import fintrend.ai.platform.backend.fintrend_ai_platform_backend.ModelEvaluation.service.ModelEvaluationService;
 import fintrend.ai.platform.backend.fintrend_ai_platform_backend.WebSocket.response.WsKlineDTO;
 
 @Service
 public class BinanceWebSocketReadService {
+
+    private final PricePredictionService pricePredictionService;
+    private final ModelEvaluationService modelEvaluationService;
+
+    public BinanceWebSocketReadService(PricePredictionService pricePredictionService, ModelEvaluationService modelEvaluationService) {
+        this.pricePredictionService = pricePredictionService;
+        this.modelEvaluationService = modelEvaluationService;
+    } 
     
     public List<WsKlineDTO> fetchHistoricalKlines(String symbol, String interval, int limit) {
         String url = String.format("https://api.binance.com/api/v3/klines?symbol=%s&interval=%s&limit=%d",
@@ -55,4 +68,31 @@ public class BinanceWebSocketReadService {
         return result;
     }
 
+    public double getModelEvaluation() {
+        int numCandles = 99; // 50 combinations for 50 actualPrice and 50 predictedPrice
+        List<WsKlineDTO> candles = fetchHistoricalKlines("BTCUSDT", "1m", numCandles);
+        
+        List<Double> predictedPrices = new ArrayList<>();
+
+        for (int i = 0; i < 49; i++) {
+            List<Map<String, Object>> predictionInput = candles.subList(i, i + 50).stream()
+                    .map(candle -> {
+                        Map<String, Object> row = new HashMap<>();
+                        row.put("ds", Instant.ofEpochMilli(candle.getCloseTime())
+                                            .toString()); // Hoặc ISO format
+                        row.put("y", Double.parseDouble(candle.getClose()));
+                        row.put("sentiment_score", 0.3); // dummy
+                        return row;
+                    })
+                    .collect(Collectors.toList());
+            double predicted = pricePredictionService.predictPrice(predictionInput);
+            predictedPrices.add(predicted);
+        }
+
+        List<Double> actualPrices = candles.subList(50, 99).stream()
+                .map(candle -> Double.parseDouble(candle.getClose()))
+                .collect(Collectors.toList());
+        
+        return modelEvaluationService.calculateMAPE(actualPrices, predictedPrices);
+    }
 }

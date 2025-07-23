@@ -39,7 +39,7 @@ public class BinanceWebSocketClientService {
                 .buildAsync(URI.create(url), new WebSocket.Listener() {
                     @Override
                     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-                        messageHandler.handleMessage(data.toString());
+                        // messageHandler.handleMessage(data.toString());
                         webSocket.request(1);
                         return CompletableFuture.completedFuture(null);
                     }
