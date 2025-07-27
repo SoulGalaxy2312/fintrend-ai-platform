@@ -69,7 +69,7 @@ public class BinanceWebSocketReadService {
     }
 
     public double getModelEvaluation() {
-        int numCandles = 99; // 50 combinations for 50 actualPrice and 50 predictedPrice
+        int numCandles = 99; // 50 combinations for 49 actualPrice and 49 predictedPrice
         List<WsKlineDTO> candles = fetchHistoricalKlines("BTCUSDT", "1m", numCandles);
         
         List<Double> predictedPrices = new ArrayList<>();
